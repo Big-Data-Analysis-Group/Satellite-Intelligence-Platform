@@ -5,34 +5,81 @@ Automated damage assessment using Sentinel-2 satellite imagery to detect and cla
 ## Project Structure
 
 ```
-satellite-damage-detection/
-├── notebooks/
-│   ├── 1-satellite_data_cleaning.ipynb       # Data download, cloud masking, spectral indices
-│   ├── 2-feature_engineering.ipynb            # Patch/scene dataset preparation and splits
-│   ├── 2b-rich_features.ipynb                 # Optional: GLCM texture & distribution features
-│   ├── 3-model_training.ipynb                 # Train LR, RF, MLP, and ResNet-50
-│   ├── 4-evaluation.ipynb                     # Full evaluation, damage maps, reports
-│   └── Satellite Intelligence Platform Merged.ipynb  # Combined single-file pipeline
-├── src/               # Python source modules
-├── data/              # Data directory (raw, processed, patches, splits)
-├── models/            # Trained model files and preprocessing artifacts
-├── results/           # Outputs: metrics, predictions, plots, damage maps
-└── scripts/           # Standalone executable scripts
+Satellite-Intelligence-Platform/
+├── satellite-damage-detection/
+│   ├── notebooks/
+│   │   ├── 1-satellite_data_cleaning.ipynb       # Data download, cloud masking, spectral indices
+│   │   ├── 2-feature_engineering.ipynb            # Patch/scene dataset preparation and splits
+│   │   ├── 2b-rich_features.ipynb                 # Optional: GLCM texture & distribution features
+│   │   ├── 3-model_training.ipynb                 # Train LR, RF, MLP, and ResNet-50
+│   │   ├── 4-evaluation.ipynb                     # Full evaluation, damage maps, reports
+│   │   └── Satellite Intelligence Platform Merged.ipynb  # Combined single-file pipeline
+│   ├── src/               # Python source modules
+│   ├── data/              # Data directory (raw, processed, patches, splits)
+│   ├── models/            # Trained model files and preprocessing artifacts
+│   ├── results/           # Outputs: metrics, predictions, plots, damage maps
+│   └── scripts/           # Standalone executable scripts
+├── api/
+│   ├── app.py             # FastAPI prediction service
+│   ├── test_app.py        # Pytest unit tests for the API (11 tests)
+│   ├── requirements.txt   # API-specific dependencies
+│   └── __init__.py
+├── dashboard.py           # Streamlit visualisation dashboard (5 tabs)
+├── test_demo.py           # End-to-end demo/test script (FastAPI + Docker + MLflow)
+├── Dockerfile             # Container image for the API service
+├── docker-compose.yml     # Single-service compose configuration
+└── .dockerignore          # Excludes raw data and notebooks from the image
 ```
 
 ## Setup
 
-1. **Clone and install dependencies:**
+1. **Clone the repository and create a virtual environment:**
    ```bash
-   pip install -r requirements.txt
+   git clone <repo-url>
+   cd Satellite-Intelligence-Platform
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # macOS / Linux
+   source .venv/bin/activate
    ```
 
-2. **Set up data directories:**
+2. **Install notebook + dashboard dependencies** (from project root):
    ```bash
-   mkdir -p data/{raw,processed,patches,splits}
-   mkdir -p models
-   mkdir -p results/{metrics,predictions,plots,damage_maps}
+   pip install jupyter streamlit plotly pandas scikit-learn mlflow requests
    ```
+
+3. **Install API dependencies:**
+   ```bash
+   pip install -r api/requirements.txt
+   ```
+
+4. **Set up data directories** (Windows PowerShell):
+   ```powershell
+   New-Item -ItemType Directory -Force satellite-damage-detection/data/raw,
+     satellite-damage-detection/data/processed,
+     satellite-damage-detection/data/patches,
+     satellite-damage-detection/data/splits,
+     satellite-damage-detection/models,
+     satellite-damage-detection/results/metrics,
+     satellite-damage-detection/results/predictions,
+     satellite-damage-detection/results/plots,
+     satellite-damage-detection/results/damage_maps
+   ```
+
+## Generated Files (not committed)
+
+The following are produced at runtime and excluded by `.gitignore`:
+
+| Path | What generates it |
+|---|---|
+| `satellite-damage-detection/models/` | Notebooks 3–4 (trained model pkl files) |
+| `satellite-damage-detection/results/` | Notebook 4 (metrics, plots, damage maps) |
+| `satellite-damage-detection/data/` | Notebooks 1–2 (raw imagery, processed CSVs) |
+| `mlruns/` | `test_demo.py --section mlflow` (MLflow run data) |
+| `mlartifacts/` | MLflow artifact store |
+| `mlflow.db` | MLflow SQLite backend (if used) |
+| `.venv/` | `pip install` |
 
 ## Workflow
 
@@ -121,6 +168,140 @@ Comprehensive evaluation of all trained models:
 | Kharkiv | 1.000 | 1.000 |
 | Bakhmut | 0.981 | 1.000 |
 | Mariupol | 0.955 | 0.961 |
+
+## Interactive Demo Components
+
+### Streamlit Dashboard
+
+Visualises spectral trends, model performance, per-city metrics, and damage probability distributions.
+
+```bash
+# From the project root
+streamlit run dashboard.py
+```
+
+Opens automatically at **http://localhost:8501**. Five tabs:
+
+| Tab | What you see |
+|---|---|
+| Spectral Trends | NDVI / NDBI / BSI over time per city, with a conflict-onset marker |
+| Model Comparison | Accuracy, F1, AUC-ROC bar chart across all four models |
+| City Performance | Per-city F1 and AUC breakdown for each model |
+| Damage Prediction | Histogram of damage probabilities and prediction scatter |
+| Summary | Final metrics table from `final_summary.json` |
+
+**Prerequisites:** model artifacts and result files must exist (run notebooks 1–4 first, or use the merged notebook).
+
+---
+
+### FastAPI Prediction Service
+
+A REST API that accepts scene-level spectral features and returns a damage classification.
+
+```bash
+# Start the server (from the project root)
+uvicorn api.app:app --reload --port 8000
+```
+
+API available at **http://localhost:8000**. Interactive docs at **http://localhost:8000/docs**.
+
+Key endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | API info and version |
+| `GET` | `/health` | Liveness check (200 = ready) |
+| `GET` | `/model/info` | Feature list and model metadata |
+| `POST` | `/predict` | Single-scene damage prediction |
+| `POST` | `/predict/batch` | Up to 100 scenes in one request |
+
+**PowerShell — single prediction:**
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/predict `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"ndvi_mean":0.45,"ndvi_std":0.12,"ndbi_mean":-0.10,"ndbi_std":0.08,"bsi_mean":-0.05,"bsi_std":0.06}'
+```
+
+**curl.exe — single prediction:**
+```bash
+curl.exe -X POST http://localhost:8000/predict `
+  -H "Content-Type: application/json" `
+  -d "{\"ndvi_mean\":0.45,\"ndvi_std\":0.12,\"ndbi_mean\":-0.10,\"ndbi_std\":0.08,\"bsi_mean\":-0.05,\"bsi_std\":0.06}"
+```
+
+Response fields: `prediction_id` (UUID), `damage_label` (0/1), `damage_label_text` ("Undamaged"/"Damaged"), `damage_probability`, `model_version`.
+
+**Run the API unit tests:**
+```bash
+pytest api/test_app.py -v
+```
+
+---
+
+### Docker Compose (Containerised API)
+
+Builds and runs the FastAPI service inside a Docker container — no local Python environment needed.
+
+```bash
+# Build and start (first run downloads the base image)
+docker compose up --build
+
+# Subsequent runs (image already built)
+docker compose up
+
+# Stop and remove containers
+docker compose down
+```
+
+The service is identical to the local API, also on **http://localhost:8000**. The container copies only the model artifacts (`satellite-damage-detection/models/`) — no raw data or notebooks are included.
+
+**Check container status:**
+```bash
+docker compose ps
+```
+
+The healthcheck polls `/health` every 30 s; status shows `healthy` once the model loads (~10 s).
+
+---
+
+### End-to-End Demo Script (`test_demo.py`)
+
+A single script that validates all three components with colour-coded pass/fail output.
+
+```bash
+# All three sections in sequence
+python test_demo.py
+
+# Individual sections (FastAPI server must be running for fastapi/docker sections)
+python test_demo.py --section fastapi   # tests local API on port 8000
+python test_demo.py --section docker    # tests Docker container on port 8000
+python test_demo.py --section mlflow    # logs models, compares runs, registers best
+```
+
+What each section does:
+
+**FastAPI section** — hits every endpoint with a healthy scene and a damaged scene, checks response fields, tests batch prediction, and verifies that invalid inputs are rejected (400 errors).
+
+**Docker section** — same endpoint tests as FastAPI but targets the containerised service. Confirms the container environment is identical to local.
+
+**MLflow section** — loads `logistic_regression.pkl` and `random_forest.pkl` from disk, re-evaluates them on the held-out test split, logs parameters/metrics/artifacts to MLflow, compares run results, registers the winning model to the Model Registry, then loads it back and runs an inference check.
+
+**Prerequisites per section:**
+
+| Section | Requirement |
+|---|---|
+| fastapi | `uvicorn api.app:app --port 8000` running in a separate terminal |
+| docker | `docker compose up --build` running in a separate terminal |
+| mlflow | Model `.pkl` files in `satellite-damage-detection/models/` (no server needed during the run) |
+
+After `--section mlflow` completes, open the tracking UI:
+```bash
+mlflow ui --port 5000
+```
+Browse to `http://localhost:5000` to compare runs and inspect the registered model.
+
+---
 
 ## Key Files
 

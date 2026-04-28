@@ -48,6 +48,14 @@ satellite-damage-detection/models/
 feature_cols.json
 final_summary.json
 
+# MLflow experiment tracking (generated at runtime)
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Auto-generated full pip-freeze (too large / encoding issues)
+requirements.txt
+
 # PyInstaller
 *.manifest
 *.spec
