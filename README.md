@@ -10,6 +10,15 @@ Automated damage assessment using Sentinel-2 satellite imagery to detect and cla
 |Adrian Deo | 816042173|
 |Matthew Singh | -|
 
+
+| Name | ID |
+|---|---|
+| Josiah Alexis | 816040879 |
+| Jonathan La Borde | 816041435 |
+| Adrian Deo | 816042173 |
+| Matthew Singh | - |
+
+
 ## Project Structure
 
 ```
