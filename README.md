@@ -172,7 +172,7 @@ New-Item -ItemType Directory -Force `
 
 [![Demo Video](https://img.youtube.com/vi/gxH328IiMFg/0.jpg)](https://www.youtube.com/watch?v=gxH328IiMFg)
 
-[Live Streamlit App]([https://big-data-analysis-group-satellite-intelligence-dashboard-sdi6ll.streamlit.app/](https://big-data-analysis-group-satellite-intelligence-platf-app-48n5nq.streamlit.app/))
+[Live Streamlit App](https://big-data-analysis-group-satellite-intelligence-platf-app-48n5nq.streamlit.app/)
 
 The dashboard has seven tabs:
 
