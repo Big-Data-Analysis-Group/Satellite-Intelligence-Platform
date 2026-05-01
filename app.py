@@ -46,6 +46,9 @@ SUMMARY_PATH  = METRICS_DIR / "final_summary.json"
 BASE_RAW      = str(ROOT / "data" / "raw")
 BASE_SPLITS   = str(ROOT / "data" / "splits")
 
+# True only when the raw .npy satellite scenes are present (not available on Streamlit Cloud)
+HAS_SCENES = any(Path(BASE_RAW).glob("*.npy"))
+
 CITY_COLORS = {"Kharkiv": "#4C9BE8", "Mariupol": "#E8844C", "Bakhmut": "#6CC24A"}
 CITIES    = ["Mariupol", "Kharkiv", "Bakhmut"]
 QUARTERS  = ["Q1", "Q2", "Q3", "Q4"]
@@ -586,6 +589,13 @@ with tab_preds:
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 6 · DAMAGE HEATMAP
 # ═════════════════════════════════════════════════════════════════════════════
+_NO_SCENES_MSG = (
+    "The raw Sentinel-2 `.npy` scene files (~several GB) are not included in the "
+    "repository and are therefore unavailable on Streamlit Cloud. "
+    "To use this tab, clone the repo locally, run **Notebook 1** to download the "
+    "scenes, then launch the app with `streamlit run app.py`."
+)
+
 with tab_heatmap:
     st.markdown("### Satellite damage heatmap")
     st.caption(
@@ -593,91 +603,94 @@ with tab_heatmap:
         "Green = healthy vegetation, dark brown = severe damage."
     )
 
-    h_col1, h_col2, h_col3 = st.columns(3)
-    with h_col1:
-        mode = st.radio("Temporal mode", ["Yearly (best quarter)", "Quarterly (raw scenes)"])
-    with h_col2:
-        view = st.radio("View", ["City Through Time", "Cities Compared"])
-    with h_col3:
-        metric_label = st.selectbox(
-            "Metric",
-            ["Damage Intensity (vs 2021 baseline)", "Raw NDVI"]
-            if mode == "Quarterly (raw scenes)"
-            else ["Damage Intensity (NDVI change)", "Raw NDVI"],
+    if not HAS_SCENES:
+        st.info(_NO_SCENES_MSG)
+    else:
+        h_col1, h_col2, h_col3 = st.columns(3)
+        with h_col1:
+            mode = st.radio("Temporal mode", ["Yearly (best quarter)", "Quarterly (raw scenes)"])
+        with h_col2:
+            view = st.radio("View", ["City Through Time", "Cities Compared"])
+        with h_col3:
+            metric_label = st.selectbox(
+                "Metric",
+                ["Damage Intensity (vs 2021 baseline)", "Raw NDVI"]
+                if mode == "Quarterly (raw scenes)"
+                else ["Damage Intensity (NDVI change)", "Raw NDVI"],
+            )
+
+        use_intensity = metric_label.startswith("Damage")
+        cmap  = DAMAGE_CMAP if use_intensity else NDVI_CMAP
+        zmin, zmax = (-0.1, 0.5) if use_intensity else (-0.3, 0.7)
+        norm  = Normalize(vmin=zmin, vmax=zmax)
+
+        st.markdown(
+            "**Color scale:** "
+            "Green = No change / healthy  |  Yellow = Partial  |  "
+            "Red = Peak damage  |  Dark brown = Past peak / severe"
         )
+        st.divider()
 
-    use_intensity = metric_label.startswith("Damage")
-    cmap  = DAMAGE_CMAP if use_intensity else NDVI_CMAP
-    zmin, zmax = (-0.1, 0.5) if use_intensity else (-0.3, 0.7)
-    norm  = Normalize(vmin=zmin, vmax=zmax)
+        if mode == "Yearly (best quarter)":
+            if view == "City Through Time":
+                city_sel = st.selectbox("City", CITIES, key="hm_city_yr")
+                panels = []
+                for yr in ALL_YEARS:
+                    q_bg = find_best_quarter(city_sel, yr)
+                    thumb = get_rgb_thumbnail(city_sel, yr, q_bg)
+                    patches, H, W = (get_damage(city_sel, yr, q_bg) if use_intensity
+                                     else get_patch_ndvi(city_sel, yr, q_bg))
+                    if thumb: _, H, W = thumb
+                    panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
+                                       ps=DISPLAY_PS, title=f"{yr} ({q_bg})"))
+                fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
+                st.pyplot(fig, use_container_width=True); plt.close(fig)
 
-    st.markdown(
-        "**Color scale:** "
-        "Green = No change / healthy  |  Yellow = Partial  |  "
-        "Red = Peak damage  |  Dark brown = Past peak / severe"
-    )
-    st.divider()
+            else:
+                yr_sel = st.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_cmp")
+                panels = []
+                for city in CITIES:
+                    q_bg = find_best_quarter(city, yr_sel)
+                    thumb = get_rgb_thumbnail(city, yr_sel, q_bg)
+                    patches, H, W = (get_damage(city, yr_sel, q_bg) if use_intensity
+                                     else get_patch_ndvi(city, yr_sel, q_bg))
+                    if thumb: _, H, W = thumb
+                    panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
+                                       ps=DISPLAY_PS, title=f"{city} ({q_bg})"))
+                fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
+                st.pyplot(fig, use_container_width=True); plt.close(fig)
 
-    if mode == "Yearly (best quarter)":
-        if view == "City Through Time":
-            city_sel = st.selectbox("City", CITIES, key="hm_city_yr")
-            panels = []
-            for yr in ALL_YEARS:
-                q_bg = find_best_quarter(city_sel, yr)
-                thumb = get_rgb_thumbnail(city_sel, yr, q_bg)
-                patches, H, W = (get_damage(city_sel, yr, q_bg) if use_intensity
-                                 else get_patch_ndvi(city_sel, yr, q_bg))
-                if thumb: _, H, W = thumb
-                panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
-                                   ps=DISPLAY_PS, title=f"{yr} ({q_bg})"))
-            fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
-            st.pyplot(fig, use_container_width=True); plt.close(fig)
+        else:  # Quarterly
+            if view == "City Through Time":
+                hc1, hc2 = st.columns(2)
+                city_sel = hc1.selectbox("City", CITIES, key="hm_city_q")
+                yr_sel   = hc2.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_q")
+                st.caption("Q1 = Jan–Mar · Q2 = Apr–Jun · Q3 = Jul–Sep · Q4 = Oct–Dec")
+                panels = []
+                for q in QUARTERS:
+                    thumb = get_rgb_thumbnail(city_sel, yr_sel, q)
+                    patches, H, W = (get_damage(city_sel, yr_sel, q) if use_intensity
+                                     else get_patch_ndvi(city_sel, yr_sel, q))
+                    if thumb: _, H, W = thumb
+                    panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
+                                       ps=DISPLAY_PS, title=q))
+                fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
+                st.pyplot(fig, use_container_width=True); plt.close(fig)
 
-        else:
-            yr_sel = st.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_cmp")
-            panels = []
-            for city in CITIES:
-                q_bg = find_best_quarter(city, yr_sel)
-                thumb = get_rgb_thumbnail(city, yr_sel, q_bg)
-                patches, H, W = (get_damage(city, yr_sel, q_bg) if use_intensity
-                                 else get_patch_ndvi(city, yr_sel, q_bg))
-                if thumb: _, H, W = thumb
-                panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
-                                   ps=DISPLAY_PS, title=f"{city} ({q_bg})"))
-            fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
-            st.pyplot(fig, use_container_width=True); plt.close(fig)
-
-    else:  # Quarterly
-        if view == "City Through Time":
-            hc1, hc2 = st.columns(2)
-            city_sel = hc1.selectbox("City", CITIES, key="hm_city_q")
-            yr_sel   = hc2.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_q")
-            st.caption("Q1 = Jan–Mar · Q2 = Apr–Jun · Q3 = Jul–Sep · Q4 = Oct–Dec")
-            panels = []
-            for q in QUARTERS:
-                thumb = get_rgb_thumbnail(city_sel, yr_sel, q)
-                patches, H, W = (get_damage(city_sel, yr_sel, q) if use_intensity
-                                 else get_patch_ndvi(city_sel, yr_sel, q))
-                if thumb: _, H, W = thumb
-                panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
-                                   ps=DISPLAY_PS, title=q))
-            fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
-            st.pyplot(fig, use_container_width=True); plt.close(fig)
-
-        else:
-            hc1, hc2 = st.columns(2)
-            yr_sel = hc1.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_qcmp")
-            q_sel  = hc2.selectbox("Quarter", QUARTERS, index=1, key="hm_q_cmp")
-            panels = []
-            for city in CITIES:
-                thumb = get_rgb_thumbnail(city, yr_sel, q_sel)
-                patches, H, W = (get_damage(city, yr_sel, q_sel) if use_intensity
-                                 else get_patch_ndvi(city, yr_sel, q_sel))
-                if thumb: _, H, W = thumb
-                panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
-                                   ps=DISPLAY_PS, title=city))
-            fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
-            st.pyplot(fig, use_container_width=True); plt.close(fig)
+            else:
+                hc1, hc2 = st.columns(2)
+                yr_sel = hc1.selectbox("Year", ALL_YEARS, index=1, key="hm_yr_qcmp")
+                q_sel  = hc2.selectbox("Quarter", QUARTERS, index=1, key="hm_q_cmp")
+                panels = []
+                for city in CITIES:
+                    thumb = get_rgb_thumbnail(city, yr_sel, q_sel)
+                    patches, H, W = (get_damage(city, yr_sel, q_sel) if use_intensity
+                                     else get_patch_ndvi(city, yr_sel, q_sel))
+                    if thumb: _, H, W = thumb
+                    panels.append(dict(thumb=thumb, patches=patches, H=H, W=W,
+                                       ps=DISPLAY_PS, title=city))
+                fig = make_heatmap_fig(panels, cmap, norm, zmin, zmax)
+                st.pyplot(fig, use_container_width=True); plt.close(fig)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 7 · CITY ANIMATIONS
@@ -690,21 +703,24 @@ with tab_anim:
         "First generation takes ~20–30 s per city; results are cached for the session."
     )
 
-    anim_metric = st.radio(
-        "Metric",
-        ["Damage Intensity (vs 2021 baseline)", "Raw NDVI"],
-        horizontal=True,
-        key="anim_metric",
-    )
-    use_intensity_anim = anim_metric.startswith("Damage")
-    st.divider()
+    if not HAS_SCENES:
+        st.info(_NO_SCENES_MSG)
+    else:
+        anim_metric = st.radio(
+            "Metric",
+            ["Damage Intensity (vs 2021 baseline)", "Raw NDVI"],
+            horizontal=True,
+            key="anim_metric",
+        )
+        use_intensity_anim = anim_metric.startswith("Damage")
+        st.divider()
 
-    a_cols = st.columns(3)
-    for col, city in zip(a_cols, CITIES):
-        with col:
-            st.markdown(f"**{city}**")
-            gif_bytes = make_city_gif(city, use_intensity=use_intensity_anim)
-            if gif_bytes:
-                st.image(gif_bytes, use_container_width=True)
-            else:
-                st.warning("No scene data available.")
+        a_cols = st.columns(3)
+        for col, city in zip(a_cols, CITIES):
+            with col:
+                st.markdown(f"**{city}**")
+                gif_bytes = make_city_gif(city, use_intensity=use_intensity_anim)
+                if gif_bytes:
+                    st.image(gif_bytes, use_container_width=True)
+                else:
+                    st.warning("No scene data available.")

@@ -27,7 +27,6 @@ share/python-wheels/
 MANIFEST
 
 /data
-*.csv
 *.h5
 *.npy
 *.png
@@ -38,23 +37,31 @@ MANIFEST
 *.pt
 *.joblib
 
-# Generated outputs
+# Generated outputs — plots and raw images only (not metrics)
 *.gif
-results/
-satellite-damage-detection/results/
+results/plots/
+satellite-damage-detection/results/plots/
+satellite-damage-detection/results/damage_maps/
 satellite-damage-detection/models/
+satellite-damage-detection/data/raw/
+satellite-damage-detection/data/patches/
 
-# Generated JSON artifacts (feature lists, summaries)
+# Exclude CSVs broadly, then re-include the dashboard data files.
+# Note: negation only works if the parent directory is NOT excluded.
+*.csv
+!satellite-damage-detection/results/metrics/model_comparison.csv
+!satellite-damage-detection/results/metrics/per_city_metrics.csv
+!satellite-damage-detection/results/predictions/test_predictions.csv
+!satellite-damage-detection/data/processed/sentinel2_clean_2021_2024.csv
+
+# Exclude model-specific JSON but allow the dashboard summary
 feature_cols.json
-final_summary.json
+!satellite-damage-detection/results/metrics/final_summary.json
 
 # MLflow experiment tracking (generated at runtime)
 mlruns/
 mlartifacts/
 mlflow.db
-
-# Auto-generated full pip-freeze (too large / encoding issues)
-requirements.txt
 
 # PyInstaller
 *.manifest

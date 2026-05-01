@@ -1,0 +1,18 @@
+{
+  "best_model": "Random Forest",
+  "test_accuracy": 0.8079,
+  "test_precision": 0.6256,
+  "test_recall": 0.635,
+  "test_f1": 0.6274,
+  "test_auc_roc": 0.9166,
+  "optimal_threshold": null,
+  "n_train": 262,
+  "n_val": 88,
+  "n_test": 151,
+  "n_features": 6,
+  "cities_evaluated": [
+    "Bakhmut",
+    "Kharkiv",
+    "Mariupol"
+  ]
+}
