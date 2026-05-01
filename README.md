@@ -12,6 +12,14 @@ Automated damage assessment using Sentinel-2 satellite imagery to detect and cla
 | Matthew Singh | - |
 
 
+## Demo
+
+[![Demo Video](https://img.youtube.com/vi/gxH328IiMFg/0.jpg)](https://www.youtube.com/watch?v=gxH328IiMFg)
+
+[Live Demo](https://big-data-analysis-group-satellite-intelligence-dashboard-sdi6ll.streamlit.app/)
+
+
+
 ## Project Structure
 
 ```
