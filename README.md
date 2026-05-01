@@ -1,6 +1,6 @@
 # Satellite Intelligence Platform
 
-This project applies big-data and machine-learning techniques to Sentinel-2 multispectral satellite imagery to automatically detect and classify conflict-related infrastructure damage across three Ukrainian cities — Mariupol, Kharkiv, and Bakhmut — from Q1 2021 through Q2 2024. Raw imagery is cleaned and cloud-masked in a preprocessing pipeline, spectral indices (NDVI, NDBI, BSI) and texture features are extracted at patch and scene level, and four classifiers (Logistic Regression, Random Forest, MLP, ResNet-50) are trained on a group-stratified split to avoid data leakage across city-year groups. The best model (MLP) achieves 93.4% test accuracy and 0.980 AUC-ROC. Results are surfaced through an interactive Streamlit dashboard with seven tabs covering model comparison, per-city metrics, spectral trends, prediction exploration, a satellite-imagery damage heatmap, and temporal animations.
+This project applies big-data and machine-learning techniques to Sentinel-2 multispectral satellite imagery to automatically detect and classify conflict-related infrastructure damage across three Ukrainian cities - Mariupol, Kharkiv, and Bakhmut - from Q1 2021 through Q2 2024. Raw imagery is cleaned and cloud-masked in a preprocessing pipeline, spectral indices (NDVI, NDBI, BSI) and texture features are extracted at patch and scene level, and four classifiers (Logistic Regression, Random Forest, MLP, ResNet-50) are trained on a group-stratified split to avoid data leakage across city-year groups. The best model (MLP) achieves 93.4% test accuracy and 0.980 AUC-ROC. Results are surfaced through an interactive Streamlit dashboard with seven tabs covering model comparison, per-city metrics, spectral trends, prediction exploration, a satellite-imagery damage heatmap, and temporal animations.
 
 ---
 
@@ -68,7 +68,7 @@ Inside JupyterLab, open and run each notebook in sequence:
 | 3 | `satellite-damage-detection/notebooks/3-model_training.ipynb` | Train LR, RF, MLP, and ResNet-50; save model files and test predictions |
 | 4 | `satellite-damage-detection/notebooks/4-evaluation.ipynb` | Full evaluation, damage maps, per-city metrics, final summary JSON |
 
-**Alternative — single merged notebook:**
+**Alternative - single merged notebook:**
 
 ```bash
 # Open the combined pipeline (runs notebooks 1–4 in one file)
@@ -91,7 +91,7 @@ uvicorn api.app:app --reload --port 8000
 
 Available at **http://localhost:8000** · docs at **http://localhost:8000/docs**.
 
-**Run with Docker** (optional — no local Python environment required for the API):
+**Run with Docker** (optional - no local Python environment required for the API):
 
 ```bash
 docker compose up --build
@@ -106,10 +106,10 @@ The key results reported in the paper are produced by Notebook 4 (`4-evaluation.
 1. Complete the full pipeline (steps 1–4 above).
 2. Open `4-evaluation.ipynb` and run all cells.
 3. Results are written to:
-   - `satellite-damage-detection/results/metrics/final_summary.json` — overall test-set metrics
-   - `satellite-damage-detection/results/metrics/model_comparison.csv` — per-model accuracy, F1, AUC
-   - `satellite-damage-detection/results/metrics/per_city_metrics.csv` — per-city breakdown
-   - `satellite-damage-detection/results/predictions/test_predictions.csv` — patch-level predictions
+   - `satellite-damage-detection/results/metrics/final_summary.json` - overall test-set metrics
+   - `satellite-damage-detection/results/metrics/model_comparison.csv` - per-model accuracy, F1, AUC
+   - `satellite-damage-detection/results/metrics/per_city_metrics.csv` - per-city breakdown
+   - `satellite-damage-detection/results/predictions/test_predictions.csv` - patch-level predictions
 
 **Expected results (MLP, test set):**
 
@@ -135,7 +135,7 @@ The key results reported in the paper are produced by Notebook 4 (`4-evaluation.
 
 ## Data
 
-**Source:** [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com) — Sentinel-2 Level-2A collection (`sentinel-2-l2a`). No account is required; data is accessed via the public STAC API in Notebook 1.
+**Source:** [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com) - Sentinel-2 Level-2A collection (`sentinel-2-l2a`). No account is required; data is accessed via the public STAC API in Notebook 1.
 
 **Study areas and period:** Mariupol, Kharkiv, and Bakhmut, Ukraine · Q1 2021 – Q2 2024 · 41 scenes across 14 quarters.
 
