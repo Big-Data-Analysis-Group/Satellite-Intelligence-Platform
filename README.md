@@ -1,11 +1,11 @@
 # Satellite Damage Detection - Ukraine Conflict Analysis
 
 Automated damage assessment using Sentinel-2 satellite imagery to detect and classify infrastructure damage across Ukrainian conflict zones (Mariupol, Kharkiv, Bakhmut).
-Name | ID
-Josiah Alexis | 816040879
-Jonathan La Borde | 816041435
-Adrian Deo | 816042173
-Matthew Singh | -
+|Name | ID|
+|Josiah Alexis | 816040879|
+|Jonathan La Borde | 816041435|
+|Adrian Deo | 816042173|
+|Matthew Singh | -|
 
 ## Project Structure
 
