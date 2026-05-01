@@ -351,8 +351,17 @@ Browse to `http://localhost:5000` to compare runs and inspect the registered mod
 - **Study areas:** Mariupol, Kharkiv, and Bakhmut, Ukraine
 - **Time span:** Q1 2021 – Q2 2024 (14 quarters, 41 scenes)
 - **Damage labels:** Derived from conflict timeline (2021 = baseline, 2022–2024 = conflict)
+
+
+
+
 - **Validation proxy:** UNOSAT-style period-level damage rate comparison
 
 ## Citation
 
 If you use this project, please cite the proposal: "Automated Satellite Damage Assessment for Humanitarian Response in Ukraine"
+
+
+
+## AI tools used
+AI was used for formatting notebooks and README, testing and explaining concepts.
